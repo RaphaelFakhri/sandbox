@@ -14,6 +14,8 @@ const docs = {
   "sandbox exec": "exec --help",
   "sandbox stop": "stop --help",
   "sandbox copy": "copy --help",
+  "sandbox read": "read --help",
+  "sandbox write": "write --help",
   "sandbox connect": "connect --help",
   "sandbox snapshot": "snapshot --help",
   "sandbox snapshots": "snapshots --help",
