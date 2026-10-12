@@ -18,6 +18,7 @@ import { sessions } from "./commands/sessions";
 import { config } from "./commands/config";
 import { drives } from "./commands/drives";
 import { telemetryCommand } from "./commands/telemetry";
+import { gateway } from "./commands/gateway";
 
 export const app = (opts?: { withoutAuth?: boolean; appName?: string }) => {
   const appName = opts?.appName ?? "sandbox";
@@ -41,6 +42,7 @@ export const app = (opts?: { withoutAuth?: boolean; appName?: string }) => {
       snapshots,
       sessions,
       drives,
+      gateway,
       telemetry: telemetryCommand,
       ...(!opts?.withoutAuth && {
         login,

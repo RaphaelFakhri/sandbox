@@ -24,6 +24,7 @@ Commands:
     snapshots                                  Manage sandbox snapshots
     sessions                                   Manage sandbox sessions
     drives                                     Manage sandbox drives
+    gateway                                    Set up reusable AI Gateway credentials for coding agents
     telemetry                                  Manage telemetry collection status
     login                                      Log in to the Sandbox CLI
     logout                                     Log out of the Sandbox CLI
@@ -184,6 +185,7 @@ Flags:
     --non-persistent  Disable automatic restore of the filesystem between sessions. [optional]
     --silent          Don't write sandbox name to stdout [optional]
     --connect         Start an interactive shell session after creating the sandbox [optional]
+    --ai              Prepare all coding agents, or the selected agent, with AI Gateway; credentials stay outside the sandbox [optional]
     --help, -h        show help [optional]
 
 Auth & Scope:

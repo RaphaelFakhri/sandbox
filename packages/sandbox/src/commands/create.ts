@@ -23,6 +23,15 @@ import { region, failoverRegions } from "../args/region";
 import { networkId } from "../args/network-id";
 import { defaultShell } from "../interactive-shell/default-shell";
 import { agentNames, agents } from "./agents";
+import {
+  checkGatewayEnv,
+  gatewayEnv,
+  gatewayPolicy,
+  gatewayTags,
+} from "../util/agent-gateway/policy";
+import { resolveGatewayKey } from "../util/agent-gateway/credentials";
+import { prepareAgent } from "../util/agent-gateway/config";
+import { rememberGatewaySetup } from "../util/agent-gateway/runtime";
 
 export const args = {
   name: cmd.option({
@@ -88,6 +97,11 @@ export const create = cmd.command({
   description: "Create a sandbox in the specified account and project.",
   args: {
     ...args,
+    ai: cmd.flag({
+      long: "ai",
+      description:
+        "Prepare all coding agents, or the selected agent, with AI Gateway; credentials stay outside the sandbox",
+    }),
     agent: cmd.positional({
       displayName: "agent",
       description: `Open a coding agent in a new sandbox (${agentNames.join(", ")})`,
@@ -112,6 +126,7 @@ export const create = cmd.command({
   async handler(input) {
     const {
       agent,
+      ai,
       name,
       nonPersistent,
       ports,
@@ -144,17 +159,18 @@ export const create = cmd.command({
       __printConnectHint?: boolean;
     };
     const launcher = agent ? agents[agent] : undefined;
-    if (agent) {
+    if (ai) checkGatewayEnv(envVars);
+    if (agent || ai) {
       if (
         runtime !== undefined ||
         image !== undefined ||
         snapshot !== undefined
       ) {
         throw new Error(
-          `sandbox create ${agent} cannot be combined with --runtime, --image, or --snapshot.`,
+          `sandbox create ${agent ?? "--ai"} cannot be combined with --runtime, --image, or --snapshot.`,
         );
       }
-      if (!isatty(0) || !isatty(1)) {
+      if (agent && (!isatty(0) || !isatty(1))) {
         throw new Error(
           `sandbox create ${agent} requires a terminal (TTY). Run it in an interactive terminal.`,
         );
@@ -168,7 +184,7 @@ export const create = cmd.command({
     // in flight, so stale installs learn they're behind at no latency cost.
     const versionCheck = silent ? undefined : startLatestVersionCheck();
 
-    const networkPolicy = buildNetworkPolicy({
+    let networkPolicy = buildNetworkPolicy({
       networkPolicy: networkPolicyMode,
       allowedDomains,
       allowedCIDRs,
@@ -181,7 +197,7 @@ export const create = cmd.command({
       deleteEvictedSnapshots,
     });
 
-    const selectedImage = agent ? "vercel/sandbox/universal" : image;
+    const selectedImage = agent || ai ? "vercel/sandbox/universal" : image;
     const runtimeOptions =
       selectedImage !== undefined
         ? { image: selectedImage }
@@ -191,7 +207,29 @@ export const create = cmd.command({
 
     const persistent = !nonPersistent;
     const resources = vcpus ? { vcpus } : undefined;
-    const tagsObj = Object.keys(tags).length > 0 ? tags : undefined;
+    let tagsObj = ai
+      ? gatewayTags(tags, agent ?? "all")
+      : Object.keys(tags).length > 0
+        ? tags
+        : undefined;
+    let enableAiGateway: boolean | undefined;
+    if (ai) {
+      gatewayPolicy(networkPolicy, "validation-only");
+      const key = await resolveGatewayKey(scope, {
+        durationMs: Math.max(ms(timeout), ms("24h")),
+        optional: true,
+      });
+      if (key && Object.values(envVars).some((value) => value.includes(key)))
+        throw new Error(
+          "Do not pass the Gateway key through --env. --ai injects it outside the sandbox.",
+        );
+      if (key) networkPolicy = gatewayPolicy(networkPolicy, key);
+      else enableAiGateway = true;
+      tagsObj = gatewayTags(tags, agent ?? "all", key);
+    }
+    const sandboxEnv = ai
+      ? { ...envVars, ...gatewayEnv(agent ?? "all") }
+      : envVars;
     const mountsObj = Object.keys(mounts).length > 0 ? mounts : undefined;
     const spinner = silent ? undefined : ora("Creating sandbox...").start();
     const sandbox = snapshot
@@ -205,7 +243,8 @@ export const create = cmd.command({
           timeout: ms(timeout),
           resources,
           networkPolicy,
-          env: envVars,
+          enableAiGateway,
+          env: sandboxEnv,
           tags: tagsObj,
           mounts: mountsObj,
           region,
@@ -228,7 +267,8 @@ export const create = cmd.command({
           timeout: ms(timeout),
           resources,
           networkPolicy,
-          env: envVars,
+          enableAiGateway,
+          env: sandboxEnv,
           tags: tagsObj,
           mounts: mountsObj,
           region,
@@ -242,6 +282,17 @@ export const create = cmd.command({
           __interactive: true,
         });
     spinner?.stop();
+
+    if (ai) {
+      try {
+        await prepareAgent(sandbox, agent ?? "all");
+        rememberGatewaySetup(sandbox, agent ?? "all");
+      } catch {
+        throw new Error(
+          `Gateway configuration failed for sandbox ${sandbox.name}. It remains available for inspection. Retry with sandbox exec --scope=${scope.team} --project=${scope.project} -i ${sandbox.name} -- ${agent ?? "bash"}, or stop it with sandbox stop ${sandbox.name}.`,
+        );
+      }
+    }
 
     if (!sandbox.interactivePort) {
       throw new Error(
