@@ -34,7 +34,8 @@ sandbox create claude # Create a new sandbox and open Claude Code
 sandbox create codex # Create a new sandbox and open Codex
 ```
 
-Add `--ai` to prepare all four agents with AI Gateway, or name one to launch it:
+Add `--ai` to enable AI Gateway. On the universal image, this also prepares all
+four agents, or the selected agent:
 
 ```bash
 sandbox create --ai
@@ -46,6 +47,20 @@ sandbox create --ai pi
 
 Bare `--ai` prepares all four agents in the standard universal image without
 launching one. Selecting an agent prepares that agent and opens it.
+
+Use your own image for Gateway access without changing agent configuration:
+
+```bash
+sandbox create --image my-image --ai
+```
+
+This preserves your image and its configuration files on creation and reconnect.
+Your application must target `https://ai-gateway.vercel.sh` using its supported
+API path and the placeholder `AI_GATEWAY_API_KEY` provided in the sandbox.
+The external firewall supplies the real credential. No agents are installed or
+configured on custom images, even if an agent is later started with `sandbox exec`.
+Agent shortcuts require the universal image. `--ai` cannot be combined with
+`--runtime` or `--snapshot`.
 
 On teams with managed Gateway enabled, your Vercel login authorizes a dedicated
 key for each running sandbox session. The backend injects it through the egress

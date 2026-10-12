@@ -28,6 +28,7 @@ import {
   gatewayEnv,
   gatewayPolicy,
   gatewayTags,
+  type GatewaySelection,
 } from "../util/agent-gateway/policy";
 import { resolveGatewayKey } from "../util/agent-gateway/credentials";
 import { prepareAgent } from "../util/agent-gateway/config";
@@ -100,7 +101,7 @@ export const create = cmd.command({
     ai: cmd.flag({
       long: "ai",
       description:
-        "Prepare all coding agents, or the selected agent, with AI Gateway; credentials stay outside the sandbox",
+        "Enable AI Gateway outside the sandbox; also configure coding agents on the universal image",
     }),
     agent: cmd.positional({
       displayName: "agent",
@@ -159,15 +160,29 @@ export const create = cmd.command({
       __printConnectHint?: boolean;
     };
     const launcher = agent ? agents[agent] : undefined;
-    if (ai) checkGatewayEnv(envVars);
+    const selectedImage =
+      image ?? (agent || ai ? "vercel/sandbox/universal" : undefined);
+    const universalImage =
+      /^(?:vcr\.vercel\.com\/)?vercel\/sandbox\/universal(?::[^/@\s]+|@sha256:[a-f0-9]{64})?$/.test(
+        selectedImage ?? "",
+      );
+    const gatewaySelection: GatewaySelection = universalImage
+      ? (agent ?? "all")
+      : "none";
+    if (ai) checkGatewayEnv(envVars, gatewaySelection);
     if (agent || ai) {
       if (
         runtime !== undefined ||
-        image !== undefined ||
-        snapshot !== undefined
+        snapshot !== undefined ||
+        (!ai && image !== undefined)
       ) {
         throw new Error(
-          `sandbox create ${agent ?? "--ai"} cannot be combined with --runtime, --image, or --snapshot.`,
+          `sandbox create ${agent ?? "--ai"} cannot be combined with ${ai ? "--runtime or --snapshot" : "--runtime, --image, or --snapshot"}.`,
+        );
+      }
+      if (agent && image !== undefined && !universalImage) {
+        throw new Error(
+          "Agent shortcuts require the universal image. For a custom image, use --ai without an agent shortcut and launch your application with sandbox exec.",
         );
       }
       if (agent && (!isatty(0) || !isatty(1))) {
@@ -197,7 +212,6 @@ export const create = cmd.command({
       deleteEvictedSnapshots,
     });
 
-    const selectedImage = agent || ai ? "vercel/sandbox/universal" : image;
     const runtimeOptions =
       selectedImage !== undefined
         ? { image: selectedImage }
@@ -208,7 +222,7 @@ export const create = cmd.command({
     const persistent = !nonPersistent;
     const resources = vcpus ? { vcpus } : undefined;
     let tagsObj = ai
-      ? gatewayTags(tags, agent ?? "all")
+      ? gatewayTags(tags, gatewaySelection)
       : Object.keys(tags).length > 0
         ? tags
         : undefined;
@@ -225,10 +239,10 @@ export const create = cmd.command({
         );
       if (key) networkPolicy = gatewayPolicy(networkPolicy, key);
       else enableAiGateway = true;
-      tagsObj = gatewayTags(tags, agent ?? "all", key);
+      tagsObj = gatewayTags(tags, gatewaySelection, key);
     }
     const sandboxEnv = ai
-      ? { ...envVars, ...gatewayEnv(agent ?? "all") }
+      ? { ...envVars, ...gatewayEnv(gatewaySelection) }
       : envVars;
     const mountsObj = Object.keys(mounts).length > 0 ? mounts : undefined;
     const spinner = silent ? undefined : ora("Creating sandbox...").start();
@@ -285,8 +299,9 @@ export const create = cmd.command({
 
     if (ai) {
       try {
-        await prepareAgent(sandbox, agent ?? "all");
-        rememberGatewaySetup(sandbox, agent ?? "all");
+        if (gatewaySelection !== "none")
+          await prepareAgent(sandbox, gatewaySelection);
+        rememberGatewaySetup(sandbox, gatewaySelection);
       } catch {
         throw new Error(
           `Gateway configuration failed for sandbox ${sandbox.name}. It remains available for inspection. Retry with sandbox exec --scope=${scope.team} --project=${scope.project} -i ${sandbox.name} -- ${agent ?? "bash"}, or stop it with sandbox stop ${sandbox.name}.`,

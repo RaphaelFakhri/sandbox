@@ -143,4 +143,38 @@ describe("Gateway reconnect", () => {
     );
     expect(mocks.shell).not.toHaveBeenCalled();
   });
+  test.each(["codex", "claude", "pi", "opencode", "node", "bash"])(
+    "Gateway-only reconnect does not configure %s or override app env",
+    async (command) => {
+      mocks.get.mockResolvedValue({
+        tags: { "sandbox-ai": "v3:none:managed" },
+      });
+      await exec.handler({
+        ...input,
+        command,
+        envVars: { HOME: "/app", ANTHROPIC_BASE_URL: "https://example.com" },
+      });
+      expect(mocks.key).not.toHaveBeenCalled();
+      expect(mocks.prepare).not.toHaveBeenCalled();
+      expect(mocks.shell).toHaveBeenCalledWith(
+        expect.objectContaining({
+          envVars: {
+            HOME: "/app",
+            ANTHROPIC_BASE_URL: "https://example.com",
+            AI_GATEWAY_API_KEY: "sandbox-firewall-credential",
+          },
+        }),
+      );
+    },
+  );
+  test("Gateway-only caller-owned reconnect validates the original key before resume", async () => {
+    mocks.get.mockResolvedValue({
+      tags: { "sandbox-ai": `v2:none:${gatewayKeyFingerprint("new-secret")}` },
+    });
+    mocks.key.mockRejectedValue(new Error("expired"));
+    await expect(exec.handler(input)).rejects.toThrow("expired");
+    expect(mocks.get).toHaveBeenCalledOnce();
+    expect(mocks.prepare).not.toHaveBeenCalled();
+    expect(mocks.shell).not.toHaveBeenCalled();
+  });
 });

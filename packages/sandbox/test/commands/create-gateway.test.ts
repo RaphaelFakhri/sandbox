@@ -79,6 +79,85 @@ describe("create --ai", () => {
   test("accepts flag after the agent too", async () => {
     expect((await create(["codex", "--ai"]))._tag).toBe("ok");
   });
+  test("custom images get managed Gateway access without agent configuration", async () => {
+    mocks.key.mockResolvedValue(undefined);
+    expect(
+      (
+        await create([
+          "--ai",
+          "--image=my-team/my-app:stable",
+          "--env=HOME=/app",
+        ])
+      )._tag,
+    ).toBe("ok");
+    expect(mocks.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        image: "my-team/my-app:stable",
+        enableAiGateway: true,
+        tags: { "sandbox-ai": "v3:none:managed" },
+        env: {
+          HOME: "/app",
+          AI_GATEWAY_API_KEY: "sandbox-firewall-credential",
+        },
+      }),
+    );
+    expect(mocks.prepare).not.toHaveBeenCalled();
+    expect(mocks.exec).not.toHaveBeenCalled();
+  });
+  test("custom images keep their selected image with caller-owned firewall credentials", async () => {
+    await create(["--ai", "--image=my-team/my-app"]);
+    const request = mocks.create.mock.calls[0][0];
+    expect(request.image).toBe("my-team/my-app");
+    expect(request.enableAiGateway).toBeUndefined();
+    expect(request.tags["sandbox-ai"]).toBe(
+      `v2:none:${gatewayKeyFingerprint("host-gateway-secret")}`,
+    );
+    expect(JSON.stringify(request.networkPolicy)).toContain(
+      "host-gateway-secret",
+    );
+    expect(request.env).toEqual({
+      AI_GATEWAY_API_KEY: "sandbox-firewall-credential",
+    });
+    expect(mocks.prepare).not.toHaveBeenCalled();
+  });
+  test.each([
+    "vercel/sandbox/universal",
+    "vercel/sandbox/universal:latest",
+    "vcr.vercel.com/vercel/sandbox/universal:latest",
+    `vercel/sandbox/universal@sha256:${"a".repeat(64)}`,
+    `vcr.vercel.com/vercel/sandbox/universal@sha256:${"a".repeat(64)}`,
+  ])("explicit universal image %s prepares all agents", async (image) => {
+    await create(["--ai", `--image=${image}`]);
+    expect(mocks.create.mock.calls[0][0].image).toBe(image);
+    expect(mocks.prepare).toHaveBeenCalledWith(expect.anything(), "all");
+  });
+  test.each([
+    "vercel/sandbox/universal-custom",
+    "my-team/universal",
+    "vercel/sandbox/universal/other",
+    "vcr.vercel.com.example.com/vercel/sandbox/universal",
+    "example.com/vercel/sandbox/universal",
+  ])("does not configure agents for lookalike image %s", async (image) => {
+    await create(["--ai", `--image=${image}`]);
+    expect(mocks.prepare).not.toHaveBeenCalled();
+  });
+  test("an explicit universal image can launch the selected agent", async () => {
+    await create(["--ai", "codex", "--image=vercel/sandbox/universal:latest"]);
+    expect(mocks.prepare).toHaveBeenCalledWith(expect.anything(), "codex");
+    expect(mocks.exec).toHaveBeenCalledOnce();
+  });
+  test.each([
+    ["--ai", "codex", "--image=my-team/my-app"],
+    ["--ai", "--image=my-team/my-app", "--env=AI_GATEWAY_API_KEY=secret"],
+    ["--ai", "--image=my-team/my-app", "--network-policy=deny-all"],
+  ])(
+    "rejects incompatible custom setup before allocation: %j",
+    async (...args) => {
+      await expect(create(args as string[])).rejects.toThrow();
+      expect(mocks.key).not.toHaveBeenCalled();
+      expect(mocks.create).not.toHaveBeenCalled();
+    },
+  );
   test.each([
     ["--ai", "--runtime=node24"],
     ["--ai", "codex", "--network-policy=deny-all"],

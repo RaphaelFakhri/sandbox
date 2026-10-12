@@ -129,10 +129,13 @@ export const exec = cmd.command({
           });
 
     const configuredAgent = gatewayAgent(sandbox.tags);
-    if (configuredAgent) {
-      checkGatewayEnv(envVars);
-      const selectedAgent =
-        agentNames.find((name) => name === command) ?? configuredAgent;
+    const selectedAgent =
+      configuredAgent &&
+      (configuredAgent === "none"
+        ? "none"
+        : (agentNames.find((name) => name === command) ?? configuredAgent));
+    if (selectedAgent) {
+      checkGatewayEnv(envVars, selectedAgent);
       await validateGatewayCredentials(
         sandbox,
         { token, team, project },
@@ -150,12 +153,7 @@ export const exec = cmd.command({
         __includeSystemRoutes: true,
       });
     }
-    if (configuredAgent) {
-      await refreshGateway(
-        sandbox,
-        agentNames.find((name) => name === command) ?? configuredAgent,
-      );
-    }
+    if (selectedAgent) await refreshGateway(sandbox, selectedAgent);
 
     if (!interactive) {
       console.error(printCommand(command, args));

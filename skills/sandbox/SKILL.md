@@ -1054,7 +1054,7 @@ sandbox config tags <name> --tag env=prod
 ```
 
 Agent shortcuts use the universal image and require an interactive terminal.
-Do not combine them with `--image`, `--runtime`, or `--snapshot`. Configure
+Without `--ai`, do not combine them with `--image`, `--runtime`, or `--snapshot`. Configure
 authentication for the agent separately from `sandbox login`, or use `--ai`:
 
 ```bash
@@ -1063,8 +1063,15 @@ sandbox create --ai codex # Launch codex; also supports claude, opencode, and pi
 sandbox gateway setup # Create or replace the cached Gateway key
 ```
 
-`--ai` uses the standard universal image and writes nonsecret configuration for
-all four agents, or the selected agent, before launch. With managed Gateway enabled
+`--ai` enables Gateway access through external firewall injection. Without an
+explicit image, it selects the standard universal image and writes nonsecret
+configuration for all four agents, or the selected agent, before launch.
+`sandbox create --image my-image --ai` preserves the custom image and its
+configuration on creation and reconnect. It supplies only a placeholder
+`AI_GATEWAY_API_KEY` in the VM; the application must use that value and a supported
+API path at `https://ai-gateway.vercel.sh`. It does not install or configure agents
+on custom images. Agent shortcuts require the universal image; `--ai` still
+rejects `--runtime` and `--snapshot`. With managed Gateway enabled
 for the team, the backend uses the caller's Vercel login to authorize one dedicated
 key per running session and injects it through the firewall. Reconnect uses the
 existing session; actual resume reauthorizes and creates a fresh key. Stop requests

@@ -7,10 +7,11 @@ export const gatewayTag = "sandbox-ai";
 export const placeholder = "sandbox-firewall-credential";
 export type AgentName = (typeof agentNames)[number];
 export type AgentSelection = AgentName | "all";
+export type GatewaySelection = AgentSelection | "none";
 
 export function gatewayAgent(
   tags?: Record<string, string>,
-): AgentSelection | undefined {
+): GatewaySelection | undefined {
   const value = tags?.[gatewayTag];
   if (value === undefined) return;
   const [version, selected, fingerprint, extra] = value.split(":");
@@ -18,8 +19,8 @@ export function gatewayAgent(
     ((version === "v2" && /^[a-f0-9]{64}$/.test(fingerprint ?? "")) ||
       (version === "v3" && fingerprint === "managed")) &&
     !extra
-      ? selected === "all"
-        ? "all"
+      ? selected === "all" || selected === "none"
+        ? selected
         : agentNames.find((name) => name === selected)
       : undefined;
   if (!agent)
@@ -35,12 +36,12 @@ export function gatewayKeyFingerprint(key: string) {
 
 export function gatewayTags(
   tags: Record<string, string>,
-  agent: AgentSelection,
+  agent: GatewaySelection,
   key?: string,
 ) {
   if (gatewayTag in tags || Object.keys(tags).length >= 5) {
     throw new Error(
-      "--ai needs one available tag slot; sandbox-ai is reserved for agent setup.",
+      "--ai needs one available tag slot; sandbox-ai is reserved for Gateway setup.",
     );
   }
   return {
@@ -115,15 +116,20 @@ const managedEnv = new Set([
   "HOME",
 ]);
 
-export function checkGatewayEnv(env: Record<string, string>) {
-  const conflicting = Object.keys(env).filter((key) => managedEnv.has(key));
+export function checkGatewayEnv(
+  env: Record<string, string>,
+  selection: GatewaySelection = "all",
+) {
+  const conflicting = Object.keys(env).filter((key) =>
+    selection === "none" ? key === "AI_GATEWAY_API_KEY" : managedEnv.has(key),
+  );
   if (conflicting.length)
     throw new Error(
       `--ai manages these environment variables; remove their --env overrides: ${conflicting.join(", ")}`,
     );
 }
 
-export function gatewayEnv(agent: AgentSelection): Record<string, string> {
+export function gatewayEnv(agent: GatewaySelection): Record<string, string> {
   return {
     AI_GATEWAY_API_KEY: placeholder,
     ...(agent === "claude" || agent === "all"
