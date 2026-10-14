@@ -167,6 +167,7 @@ export class APIClient extends BaseClient {
 
   async createSandbox(
     params: WithPrivate<{
+      enableAiGateway?: boolean;
       name?: string;
       ports?: number[];
       projectId: string;
@@ -219,6 +220,7 @@ export class APIClient extends BaseClient {
           image: params.image,
           name: params.name,
           persistent: params.persistent,
+          enableAiGateway: params.enableAiGateway,
           networkPolicy: params.networkPolicy
             ? toAPINetworkPolicy(params.networkPolicy)
             : undefined,
@@ -239,6 +241,7 @@ export class APIClient extends BaseClient {
 
   async forkSandbox(
     params: WithPrivate<{
+      enableAiGateway?: boolean;
       sourceSandbox: string;
       projectId: string;
       name?: string;
@@ -278,6 +281,7 @@ export class APIClient extends BaseClient {
             resources: params.resources,
             image: params.image,
             persistent: params.persistent,
+            enableAiGateway: params.enableAiGateway,
             networkPolicy: params.networkPolicy
               ? toAPINetworkPolicy(params.networkPolicy)
               : undefined,
