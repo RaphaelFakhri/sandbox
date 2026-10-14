@@ -4,7 +4,7 @@ import { resolveGatewayKey } from "../util/agent-gateway/credentials";
 
 export const gateway = cmd.subcommands({
   name: "gateway",
-  description: "Set up reusable AI Gateway credentials for coding agents",
+  description: "Set up a reusable key for create --ai --use-gateway-key",
   cmds: {
     setup: cmd.command({
       name: "setup",

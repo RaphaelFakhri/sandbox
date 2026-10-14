@@ -1071,25 +1071,30 @@ configuration on creation and reconnect. It supplies only a placeholder
 `AI_GATEWAY_API_KEY` in the VM; the application must use that value and a supported
 API path at `https://ai-gateway.vercel.sh`. It does not install or configure agents
 on custom images. Agent shortcuts require the universal image; `--ai` still
-rejects `--runtime` and `--snapshot`. With managed Gateway enabled
+rejects `--runtime` and `--snapshot`. `--ai` always requests a managed session key.
+With managed Gateway enabled
 for the team, the backend uses the caller's Vercel login to authorize one dedicated
 key per running session and injects it through the firewall. Reconnect uses the
 existing session; actual resume reauthorizes and creates a fresh key. Stop requests
 revocation. This mode requires the managed Gateway backend rollout.
 
-A host `AI_GATEWAY_API_KEY`, or a key saved by `sandbox gateway setup`, takes
-precedence over managed Gateway. These reusable keys retain their own billing
-and expiry settings. They are never revoked when a sandbox stops. Sandboxes using
-a supplied key need that original key for reconnect; setup retains earlier keys
-and selects the new key for future sandboxes. Never pass a real key with `--env`.
-The VM receives only a placeholder in either mode.
+`--ai` ignores local and saved keys and fails if managed access is unavailable.
+To reuse your own key, run `sandbox gateway setup`, then
+`sandbox create --ai --use-gateway-key codex`. This explicit mode reads a host
+`AI_GATEWAY_API_KEY` first, then the saved key; if neither exists, it fails with
+setup instructions. It does not search project keys or switch to managed mode.
+Reusable keys keep their own billing and expiry and are not revoked on stop.
+Reconnect requires the original key; setup retains earlier keys for existing
+sandboxes. Never pass a real key with `--env` or as a flag value. The VM receives
+only a placeholder in either mode. Successful setup prints the credential mode
+to stderr unless `--silent` is set.
 
 Gateway mode permits outbound traffic by default; connections without a detectable
 domain pass through unmodified. Use a domain allowlist without `*` to restrict egress. Custom policies must allow `ai-gateway.vercel.sh`; deny-all,
 allowed CIDRs, and conflicting request rules are rejected. It reserves one tag
 for reconnect detection. Keep that marker when changing tags. Secure storage
 requires the OS credential store (Secret Service on Linux), with no plaintext
-fallback. Use a host environment key if storage is unavailable. Imported keys
+fallback. Use a host environment key with `--ai --use-gateway-key` if storage is unavailable. Imported keys
 have separately managed billing/expiry; revocation and budgets can interrupt work.
 
 Exiting the agent leaves the sandbox running. Unless you pass `--silent`, the CLI

@@ -62,18 +62,31 @@ configured on custom images, even if an agent is later started with `sandbox exe
 Agent shortcuts require the universal image. `--ai` cannot be combined with
 `--runtime` or `--snapshot`.
 
-On teams with managed Gateway enabled, your Vercel login authorizes a dedicated
+`--ai` requests a managed session key using your Vercel login. On teams with
+managed Gateway enabled, that login authorizes a dedicated
 key for each running sandbox session. The backend injects it through the egress
 firewall; the CLI and agent configuration receive no key secret. Reconnecting
 uses the running session. Resuming a stopped sandbox rechecks permissions and
 provisions a fresh key. Session termination requests revocation of that session's
 key. Managed Gateway requires the corresponding backend rollout.
 
-You can also run `sandbox gateway setup` to create or save a reusable key in your
-OS credential store. A host `AI_GATEWAY_API_KEY` takes precedence over the saved
-key; both take precedence over managed Gateway. These user-supplied keys retain
-their own billing and expiry settings and are not revoked when a sandbox stops.
-Do not pass a key with `--env`.
+`--ai` ignores local and saved Gateway keys. If managed access is unavailable,
+creation fails without switching to a personal key. After setup succeeds, the CLI
+prints the credential mode to stderr unless you pass `--silent`.
+
+To use your own reusable key, opt in explicitly:
+
+```sh
+sandbox gateway setup
+sandbox create --ai --use-gateway-key codex
+```
+
+Setup lets you create or save a key in your OS credential store. With
+`--use-gateway-key`, a host `AI_GATEWAY_API_KEY` takes precedence over the saved key.
+If neither exists, creation fails with setup instructions. The CLI does not
+search your project's keys. Reusable keys keep their own billing and expiry
+settings and are not revoked when a sandbox stops. Never pass a key with `--env`
+or as a flag value.
 
 Sandboxes created with a supplied or saved key remain bound to that key.
 Reconnect from another computer requires the original key. Changing the saved
@@ -88,6 +101,6 @@ changing their meaning. One sandbox tag is reserved for automatic reconnect.
 
 Secure storage requires an available OS credential store (Secret Service on
 Linux). If secure storage is unavailable, use managed Gateway or a host environment
-key. Keys are never saved as plaintext. Saved CLI-created keys must remain valid for the session duration plus one hour
+key with `--ai --use-gateway-key`. Keys are never saved as plaintext. Saved CLI-created keys must remain valid for the session duration plus one hour
 (25 hours when interactive sessions automatically extend their timeout). Imported keys may have a separately managed expiry. Budget exhaustion
 or revocation can interrupt any session.
