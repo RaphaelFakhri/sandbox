@@ -18,6 +18,7 @@ Commands:
     exec           <name> <command> [...args]  Execute a command in an existing sandbox
     ssh | connect  <name>                      Start an interactive shell in an existing sandbox
     stop           <name> [...name]            Stop the current session of one or more sandboxes
+    extend         <name> <num UNIT>           Add time to a running session without changing its default timeout
     rm | remove    <name> [...name]            Permanently remove one or more sandboxes
     run            <command> [...args]         Create and run a command in a sandbox
     snapshot       <name>                      Take a snapshot of the filesystem of a sandbox
@@ -382,6 +383,37 @@ Flags:
     --help, -h  show help [optional]
 ```
 
+## `sandbox extend`
+
+```
+extend
+
+▲ sandbox extend [options]
+
+Add time to a running session without changing its default timeout
+
+Arguments:
+
+    <name>      Sandbox name with a running session
+    <num UNIT>  Time to add, for example 5m or 1h
+
+Auth & Scope:
+
+    --token <pat_or_oidc>   A Vercel authentication token. If not provided, will use the token stored in your system from `VERCEL_AUTH_TOKEN` or will start a log in process. [optional]
+    --project <my-project>  The project name or ID to associate with the command. Can be inferred from VERCEL_OIDC_TOKEN. [optional]
+    --scope <my-team>       The scope/team to associate with the command. Can be inferred from VERCEL_OIDC_TOKEN. [alias: --team] [optional]
+
+Flags:
+
+    --help, -h  show help [optional]
+
+Examples:
+
+– Add 30 minutes
+
+  $ sandbox extend my-sandbox 30m
+```
+
 ## `sandbox copy`
 
 ```
@@ -541,7 +573,7 @@ Commands:
 
     list                      <name>                    Display the current configuration of a sandbox
     vcpus                     <name> <COUNT>            Update the vCPU count of a sandbox
-    timeout                   <name> <num UNIT>         Update the timeout of a sandbox (will be applied to all new sessions)
+    timeout                   <name> <num UNIT>         Set the timeout for new sessions; a higher value extends a running session
     persistent                <name> <true|false>       Enable or disable automatic restore of the filesystem between sessions
     region                    <name> <REGION>           Update the region of a sandbox (will be applied to all new sessions)
     failover-regions          <name> <REGION,...|none>  Update the failover regions of a sandbox (replaces the existing list)
