@@ -579,14 +579,12 @@ Flags:
 
     --sudo               Give extended privileges to the command. [optional]
     --no-extend-timeout  Do not extend the sandbox timeout while running an interactive command. Only affects interactive executions. [optional]
-    --detach             Start the command and print its ID without waiting for it to finish. [optional]
     --help, -h           show help [optional]
 
 Options:
 
     --workdir, -w <str>                The working directory to run the command in [optional]
     --env <key=value>, -e=<key=value>  Environment variables to set for the command
-    --timeout <num UNIT>               Maximum duration to wait for the command (e.g. 30s, 5m). On expiry the process is killed with SIGKILL. Cannot be combined with --interactive. [optional]
 
 Auth & Scope:
 
