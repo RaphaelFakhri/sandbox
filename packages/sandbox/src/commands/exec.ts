@@ -58,6 +58,10 @@ export const args = {
     description:
       "Start the command and print its ID without waiting for it to finish.",
   }),
+  stdin: cmd.flag({
+    long: "stdin",
+    description: "Keep stdin open for writes to a detached command.",
+  }),
   tty: cmd.flag({
     long: "tty",
     short: "t",
@@ -99,12 +103,16 @@ export const exec = cmd.command({
     scope: { token, team, project },
     interactive,
     detached,
+    stdin,
     envVars,
     skipExtendingTimeout,
     timeout,
   }) {
     if (interactive && detached) {
       throw new Error("--detach cannot be combined with --interactive.");
+    }
+    if (stdin && !detached) {
+      throw new Error("--stdin requires --detach.");
     }
     if (interactive && timeout) {
       throw new Error(
@@ -139,6 +147,7 @@ export const exec = cmd.command({
           env: envVars,
           timeoutMs: timeout ? ms(timeout) : undefined,
           detached: true,
+          stdin: stdin ? true : undefined,
         });
         process.stdout.write(`${started.cmdId}\n`);
         return;
