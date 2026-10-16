@@ -1011,7 +1011,8 @@ sandbox run --rm -- npm build                # DELETES the sandbox after running
 
 # Execute command in an existing sandbox
 sandbox exec <name> -- npm install
-sandbox exec <name> --stop -- npm build
+sandbox exec <name> -- npm build
+sandbox stop <name>
 
 # Start an interactive shell
 sandbox connect <name>
