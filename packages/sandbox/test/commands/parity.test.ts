@@ -80,7 +80,7 @@ describe("SDK parity CLI commands", () => {
     vi.restoreAllMocks();
   });
 
-  test("detached exec enables writable stdin and rejects it without detach", async () => {
+  test("detached exec keeps stdin open and foreground exec forwards a local stream", async () => {
     const { exec } = await import("../../src/commands/exec.ts");
     const output = vi
       .spyOn(process.stdout, "write")
@@ -104,24 +104,29 @@ describe("SDK parity CLI commands", () => {
       expect.objectContaining({ cmd: "cat", detached: true, stdin: true }),
     );
     expect(output).toHaveBeenCalledWith("cmd_1\n");
-    await expect(
-      exec.handler({
-        sandbox: "my-sandbox",
-        command: "cat",
-        args: [],
-        scope: { token: "tok", team: "team", project: "proj" },
-        asSudo: false,
-        interactive: false,
-        detached: false,
-        stdin: true,
-        skipExtendingTimeout: false,
-        tty: false,
-        cwd: undefined,
-        envVars: {},
-        timeout: undefined,
-      }),
-    ).rejects.toThrow("--stdin requires --detach");
-    expect(mockGet).toHaveBeenCalledTimes(1);
+    const input = Readable.from(["hello\n"]);
+    vi.spyOn(process, "stdin", "get").mockReturnValue(
+      input as typeof process.stdin,
+    );
+    await exec.handler({
+      sandbox: "my-sandbox",
+      command: "cat",
+      args: [],
+      scope: { token: "tok", team: "team", project: "proj" },
+      asSudo: false,
+      interactive: false,
+      detached: false,
+      stdin: true,
+      skipExtendingTimeout: false,
+      tty: false,
+      cwd: undefined,
+      envVars: {},
+      timeout: undefined,
+    });
+    expect(mockRunCommand).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cmd: "cat", stdin: input }),
+    );
+    expect(mockGet).toHaveBeenCalledTimes(2);
   });
 
   test("writes piped bytes in order, closes stdin, and selects stderr", async () => {
@@ -186,6 +191,21 @@ describe("SDK parity CLI commands", () => {
       expect.objectContaining({ cmd: "whoami" }),
     );
     expect(output).toHaveBeenCalledWith("alice\t/home/alice\n");
+    const input = Readable.from(["hello\n"]);
+    vi.spyOn(process, "stdin", "get").mockReturnValue(
+      input as typeof process.stdin,
+    );
+    await cmd.run(users, [
+      "exec",
+      "my-sandbox",
+      "alice",
+      "--stdin",
+      "cat",
+      ...scopeFlags,
+    ]);
+    expect(mockUserRunCommand).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cmd: "cat", stdin: input }),
+    );
   });
 
   test("creates a group and changes membership through SDK methods", async () => {

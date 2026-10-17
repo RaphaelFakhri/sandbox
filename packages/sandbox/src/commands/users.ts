@@ -60,7 +60,8 @@ const exec = cmd.command({
     }),
     stdin: cmd.flag({
       long: "stdin",
-      description: "Keep stdin open for writes to a detached command",
+      description:
+        "Forward local stdin, or keep detached stdin open for later writes",
     }),
     timeout: cmd.option({
       long: "timeout",
@@ -80,9 +81,6 @@ const exec = cmd.command({
     timeout,
     scope: { token, team, project },
   }) {
-    if (stdin && !detached) {
-      throw new Error("--stdin requires --detach.");
-    }
     const sandbox = await sandboxClient.get({
       name,
       projectId: project,
@@ -112,6 +110,7 @@ const exec = cmd.command({
       timeoutMs: timeout ? ms(timeout) : undefined,
       stdout: process.stdout,
       stderr: process.stderr,
+      stdin: stdin ? process.stdin : undefined,
     });
     process.exitCode = finished.exitCode;
   },

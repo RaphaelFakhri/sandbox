@@ -347,7 +347,7 @@ Flags:
     --interactive, -i    Run the command in a secure interactive shell [optional]
     --no-extend-timeout  Do not extend the sandbox timeout while running an interactive command. Only affects interactive executions. [optional]
     --detach             Start the command and print its ID without waiting for it to finish. [optional]
-    --stdin              Keep stdin open for writes to a detached command. [optional]
+    --stdin              Forward local stdin, or keep detached stdin open for later writes. [optional]
     --tty, -t            Allocate a tty for an interactive command. This is a no-op. [optional]
     --help, -h           show help [optional]
 
@@ -719,7 +719,7 @@ Options:
 Flags:
 
     --detach    Start the command and print its ID without waiting [optional]
-    --stdin     Keep stdin open for writes to a detached command [optional]
+    --stdin     Forward local stdin, or keep detached stdin open for later writes [optional]
     --help, -h  show help [optional]
 ```
 

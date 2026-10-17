@@ -60,7 +60,8 @@ export const args = {
   }),
   stdin: cmd.flag({
     long: "stdin",
-    description: "Keep stdin open for writes to a detached command.",
+    description:
+      "Forward local stdin, or keep detached stdin open for later writes.",
   }),
   tty: cmd.flag({
     long: "tty",
@@ -111,9 +112,6 @@ export const exec = cmd.command({
     if (interactive && detached) {
       throw new Error("--detach cannot be combined with --interactive.");
     }
-    if (stdin && !detached) {
-      throw new Error("--stdin requires --detach.");
-    }
     if (interactive && timeout) {
       throw new Error(
         [
@@ -158,6 +156,7 @@ export const exec = cmd.command({
         args,
         stderr: process.stderr,
         stdout: process.stdout,
+        stdin: stdin ? process.stdin : undefined,
         sudo: asSudo,
         cwd,
         env: envVars,

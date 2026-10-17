@@ -1027,7 +1027,10 @@ sandbox commands logs <name> <command-id>
 sandbox commands wait <name> <command-id>
 sandbox commands kill <name> <command-id> --signal SIGTERM
 
-# Send input to a detached command, then signal EOF. Each write may be a separate CLI invocation.
+# Pipe local input into a command and stream its output in one invocation
+printf 'hello\n' | sandbox exec --stdin <name> -- cat
+
+# Keep stdin open when later processes need to write to a detached command
 command_id=$(sandbox exec --detach --stdin <name> -- cat)
 printf 'hello\n' | sandbox commands write <name> "$command_id"
 sandbox commands close-stdin <name> "$command_id"
