@@ -535,6 +535,35 @@ Commands:
     rm | delete    <name> [...name]  Delete one or more drives.
 ```
 
+## `sandbox drives get-or-create`
+
+```
+get-or-create
+
+▲ sandbox drives get-or-create [options]
+
+Create a drive if it does not already exist, or retrieve it.
+
+Arguments:
+
+    <name>  Drive name to create or retrieve
+
+Options:
+
+    --max-size <SIZE>  Maximum drive size, e.g. 200GiB or 2TiB (bytes if no unit). Fixed after creation. If omitted, a default of 1 TiB is used (1 GiB for Hobby). [optional]
+    --region <REGION>  Region where the drive is created. [optional]
+
+Auth & Scope:
+
+    --token <pat_or_oidc>   A Vercel authentication token. If not provided, will use the token stored in your system from `VERCEL_AUTH_TOKEN` or will start a log in process. [optional]
+    --project <my-project>  The project name or ID to associate with the command. Can be inferred from VERCEL_OIDC_TOKEN. [optional]
+    --scope <my-team>       The scope/team to associate with the command. Can be inferred from VERCEL_OIDC_TOKEN. [alias: --team] [optional]
+
+Flags:
+
+    --help, -h  show help [optional]
+```
+
 ## `sandbox drives fork`
 
 ```

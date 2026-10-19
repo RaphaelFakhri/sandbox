@@ -1040,6 +1040,11 @@ sandbox snapshots remove <snapshot-id>
 sandbox snapshots tree <name>                # Walk the tree from the sandbox's current snapshot
 sandbox snapshots tree <name> --cursor <snapshot-id> --sort-order asc
 
+# Create or retrieve a drive; size is fixed at creation
+sandbox drives get-or-create workspace --max-size 200GiB
+sandbox drives get-or-create archive --max-size 2TiB
+sandbox drives get-or-create workspace --max-size 214748364800  # Raw bytes
+
 # Config (view + update any sandbox parameter)
 sandbox config list <name>
 sandbox config vcpus <name> <count>
@@ -1055,6 +1060,11 @@ sandbox config current-snapshot <name> <snapshot-id>
 sandbox config network-policy <name> --network-policy deny-all
 sandbox config tags <name> --tag env=prod
 ```
+
+Drive sizes accept bytes or units such as `GiB` and `TiB`. Unit names are
+case-insensitive; `GB` and `TB` are aliases for the binary units. Omitting
+`--max-size` retrieves the existing size or uses the plan default for a new
+drive. The output includes a reminder that size is fixed at creation.
 
 Agent shortcuts use the universal image and require an interactive terminal.
 Do not combine them with `--image`, `--runtime`, or `--snapshot`. Configure
