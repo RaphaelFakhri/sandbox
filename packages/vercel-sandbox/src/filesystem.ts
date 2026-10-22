@@ -556,13 +556,31 @@ export class FileSystem {
     options?: { signal?: AbortSignal },
   ): Promise<void> {
     "use step";
-    const result = await this.sandbox.runCommand("mv", [oldPath, newPath], {
-      signal: options?.signal,
-    });
+    // -T treats newPath as the destination itself, like rename(2). Without it,
+    // an existing directory at newPath gets oldPath moved inside it.
+    const result = await this.sandbox.runCommand(
+      "mv",
+      ["-T", oldPath, newPath],
+      { signal: options?.signal },
+    );
     if (result.exitCode !== 0) {
       const stderr = await result.stderr();
       if (stderr.includes("No such file or directory")) {
         throw fsError("ENOENT", "no such file or directory", "rename", oldPath);
+      }
+      if (stderr.includes("Directory not empty")) {
+        throw fsError("ENOTEMPTY", "directory not empty", "rename", oldPath);
+      }
+      if (stderr.includes("with non-directory")) {
+        throw fsError(
+          "EISDIR",
+          "illegal operation on a directory",
+          "rename",
+          oldPath,
+        );
+      }
+      if (stderr.includes("with directory")) {
+        throw fsError("ENOTDIR", "not a directory", "rename", oldPath);
       }
       throw fsError("EACCES", stderr.trim(), "rename", oldPath);
     }
