@@ -340,6 +340,19 @@ describe("FileSystem", () => {
       });
     });
 
+    it("throws ENOTEMPTY when mv reports File exists for a non-empty directory", async () => {
+      sandbox.runCommand.mockResolvedValue(
+        mockCommandResult(
+          "",
+          1,
+          "mv: cannot move '/src' to '/dest': File exists",
+        ),
+      );
+      await expect(fs.rename("/src", "/dest")).rejects.toMatchObject({
+        code: "ENOTEMPTY",
+      });
+    });
+
     it("throws EISDIR when replacing a directory with a file", async () => {
       sandbox.runCommand.mockResolvedValue(
         mockCommandResult(

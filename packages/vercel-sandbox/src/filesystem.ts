@@ -568,7 +568,11 @@ export class FileSystem {
       if (stderr.includes("No such file or directory")) {
         throw fsError("ENOENT", "no such file or directory", "rename", oldPath);
       }
-      if (stderr.includes("Directory not empty")) {
+      // GNU mv reports "File exists" when newPath is a non-empty directory.
+      if (
+        stderr.includes("Directory not empty") ||
+        stderr.includes("File exists")
+      ) {
         throw fsError("ENOTEMPTY", "directory not empty", "rename", oldPath);
       }
       if (stderr.includes("with non-directory")) {
